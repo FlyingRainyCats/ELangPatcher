@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.27)
 project(ELangPatcher)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+add_subdirectory(LibELangPatch)
 
-add_executable(ELangPatcher
-        src/main.cpp
-        src/WndHandlerGen.cpp
-)
+add_executable(ELangPatcherTest src/test.cpp)
+target_link_libraries(ELangPatcherTest LibELangPatch)
 
-target_compile_definitions(ELangPatcher PRIVATE XBYAK32=1)
-target_include_directories(ELangPatcher PRIVATE vendor/xbyak/xbyak)
+add_executable(ELangPatcher src/main.cpp
+        src/ELangPatcher.cpp
+        src/ELangPatcher.h)
+target_link_libraries(ELangPatcher LibELangPatch)
