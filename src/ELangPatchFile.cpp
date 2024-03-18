@@ -8,7 +8,7 @@
 namespace fs = std::filesystem;
 
 template<typename T>
-const char* get_stream_error(const T& file) {
+const char *get_stream_error(const T &file) {
     if (file.bad()) {
         return "Unrecoverable I/O error occurred.";
     } else if (file.eof()) {
@@ -21,15 +21,20 @@ const char* get_stream_error(const T& file) {
     return "Unknown error.";
 }
 
-bool ELangPatchFile(const fs::path &file_path, bool backup, bool fake_stub) {
+bool ELangPatchFile(const fs::path &file_path, const std::u8string &suffix, bool backup, bool fake_stub) {
     if (!fs::exists(file_path)) {
         fprintf(stderr, "  ERR: file does not exist.\n");
         return false;
     }
 
-    if (backup) {
-        auto bak_file{file_path};
-        bak_file.replace_extension(file_path.extension().u8string() + u8".bak");
+    fs::path output_path{file_path};
+    auto output_file_name = output_path.stem().u8string() + suffix + output_path.extension().u8string();
+    output_path.replace_filename(output_file_name);
+
+    if (backup && fs::exists(output_path)) {
+        auto bak_file{output_path};
+        bak_file.replace_extension(output_path.extension().u8string() + u8".bak");
+
         if (!fs::exists(bak_file)) {
             std::error_code ec_backup{};
             fs::copy_file(file_path, bak_file, ec_backup);
@@ -61,7 +66,7 @@ bool ELangPatchFile(const fs::path &file_path, bool backup, bool fake_stub) {
     if (fake_stub) patcher.AddFakeEWndStub();
 
     {
-        std::ofstream ofs(file_path, std::ifstream::binary);
+        std::ofstream ofs(output_path, std::ifstream::binary);
         if (!ofs.is_open()) {
             fprintf(stderr, "  ERR: could not open file for write: %s\n", get_stream_error(ofs));
             return false;

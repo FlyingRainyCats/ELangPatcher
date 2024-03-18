@@ -24,7 +24,9 @@ int main_unicode(int argc, wchar_t *argv[]) {
     options.add_options()                                                                   //
             ("b,backup", "Enable backup", cxxopts::value<bool>()->default_value("true"))    //
             ("fake-stub", "Insert fake stub", cxxopts::value<bool>()->default_value("true"))//
-            ("h,help", "Show help")                                                         //
+            ("suffix", "Write to a different file with suffix, if specified.",
+             cxxopts::value<std::string>()->default_value(""))//
+            ("h,help", "Show help")                           //
             ("files", "The file(s) to process", cxxopts::value<std::vector<std::string>>());
 
     options.parse_positional({"files"});
@@ -47,6 +49,8 @@ int main_unicode(int argc, wchar_t *argv[]) {
         return 999;
     }
     auto files = result["files"].as<std::vector<std::string>>();
+    auto output_suffix_str = result["suffix"].as<std::string>();
+    std::u8string output_suffix{output_suffix_str.cbegin(), output_suffix_str.cend()};
 
     auto error_count{0};
     auto fake_stub = result["fake-stub"].as<bool>();
@@ -55,7 +59,7 @@ int main_unicode(int argc, wchar_t *argv[]) {
         std::u8string temp_path(file_path.cbegin(), file_path.cend());
         fs::path exe_path{temp_path};
         fprintf(stderr, "INFO: processing: %s\n", exe_path.string().c_str());
-        if (!ELangPatchFile(exe_path, backup, fake_stub)) {
+        if (!ELangPatchFile(exe_path, output_suffix, backup, fake_stub)) {
             error_count++;
         }
     }
