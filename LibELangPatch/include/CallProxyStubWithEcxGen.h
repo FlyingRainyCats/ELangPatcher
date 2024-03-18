@@ -17,8 +17,10 @@
  * 0041154F | B9 08F64A00 | mov ecx, exe.4AF608      <- `ecx_value`
  * 00411554 | E8 87C7FFFF | call exe.40DCE0          <- `call_delta`
  * 00411559 | C2 0C00     | ret C
+ * @param pre_junk_len The number of bytes until mov ecx. e.g. `15`.
+ * @param post_junk_len The number of bytes available afterwards, .e.g `3`.
  * @param ecx_value
  * @param call_delta
  * @return
  */
-std::vector<uint8_t> GenerateWndEventProxySnippet(uint32_t ecx_value, uint32_t call_delta);
+std::vector<uint8_t> GenerateCallProxyStubWithEcx(int pre_junk_len, int post_junk_len, uint32_t ecx_value, uint32_t call_delta);

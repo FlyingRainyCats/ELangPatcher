@@ -4,10 +4,8 @@ project(LibELangPatcher)
 add_library(LibELangPatch STATIC
         WndHandlerGen.cpp
         ELangInitFnGen.cpp
-        WndEventProxyGen.cpp
+        CallProxyStubWithEcxGen.cpp
         VArgsProxyGen.cpp
-        DlLFunctionCallGen.cpp
-        DlLFunctionCallGen.cpp
 )
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)

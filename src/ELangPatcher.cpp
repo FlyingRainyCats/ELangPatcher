@@ -2,11 +2,10 @@
 
 #include "PEParser.h"
 
+#include <CallProxyStubWithEcxGen.h>
 #include <ELangInitFnGen.h>
 #include <VArgsProxyGen.h>
-#include <WndEventProxyGen.h>
 #include <WndHandlerGen.h>
-#include <DlLFunctionCallGen.h>
 
 #include <algorithm>
 #include <array>
@@ -36,7 +35,7 @@ void ELangPatcher::PatchEWndV02() {
         auto call_delta = read_u32(offset + pattern.offset_at_item(3));
         fprintf(stderr, "  INFO: [PatchEWndV02] found (offset=0x%08x, ecx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ecx_value, call_delta);
 
-        auto snippet = GenerateWndEventProxySnippet(ecx_value, call_delta);
+        auto snippet = GenerateCallProxyStubWithEcx(15, 3, ecx_value, call_delta);
         std::copy(snippet.cbegin(), snippet.cend(), it);
         it += pattern.size();
     }
@@ -239,7 +238,7 @@ void ELangPatcher::PatchDllInvokeCall() {
         auto call_delta = read_u32(offset + pattern.offset_at_item(3));
         fprintf(stderr, "  INFO: [PatchDllInvokeCall] found (offset=0x%08x, ecx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ecx_value, call_delta);
 
-        auto snippet = GenerateDllFunctionCallStub(ecx_value, call_delta);
+        auto snippet = GenerateCallProxyStubWithEcx(7, 2, ecx_value, call_delta);
         std::copy(snippet.cbegin(), snippet.cend(), it);
         it += pattern.size();
     }
