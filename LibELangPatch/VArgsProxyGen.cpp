@@ -11,6 +11,8 @@ public:
         auto reg_zero = *find_and_remove_item(regs, [&](auto &r) { return r != ebx; });
         auto reg_next_func = pop_last_item(regs);
 
+        fillWithJunkSlideInst(rand_int(2, 4), {ecx, edx});
+
         shuffle_exec({
                 [&]() {
                     if (reg_next_func != ebx) {

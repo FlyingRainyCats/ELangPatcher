@@ -3,9 +3,10 @@
 #include "PEParser.h"
 
 #include <ELangInitFnGen.h>
+#include <VArgsProxyGen.h>
 #include <WndEventProxyGen.h>
 #include <WndHandlerGen.h>
-#include <VArgsProxyGen.h>
+#include <DlLFunctionCallGen.h>
 
 #include <algorithm>
 #include <array>
@@ -197,18 +198,18 @@ void ELangPatcher::PatchKernelInvokeCall() {
     std::mt19937 mt{std::random_device{}()};
 
     int pattern_id{0};
-    for (auto& pattern: patterns) {
+    for (auto &pattern: patterns) {
         auto pattern_size = pattern.size();
 
         auto it = data_.begin();
         while ((it = pattern.search(it, data_.end())) != data_.end()) {
             auto offset = std::distance(data_.begin(), it);
             auto snippet = GenerateVArgsProxyCode();
-            for(int retries{3}; snippet.size() >= 0x40 && retries >= 0; retries--) {
+            for (int retries{3}; snippet.size() >= 0x40 && retries >= 0; retries--) {
                 snippet = GenerateVArgsProxyCode();
             }
 
-            fprintf(stderr, "  INFO: [PatchKernelInvokeCall#%d] found (offset=0x%08tx, len=%04x, replace_len=%04x)\n", pattern_id,offset, static_cast<int>(pattern_size), static_cast<int>(snippet.size()));
+            fprintf(stderr, "  INFO: [PatchKernelInvokeCall#%d] found (offset=0x%08tx, len=%04x, replace_len=%04x)\n", pattern_id, offset, static_cast<int>(pattern_size), static_cast<int>(snippet.size()));
             std::copy(snippet.cbegin(), snippet.cend(), it);
 
             if (pattern_size > snippet.size()) {
@@ -219,6 +220,27 @@ void ELangPatcher::PatchKernelInvokeCall() {
 
             it += pattern_size;
         }
-        pattern_id ++;
+        pattern_id++;
+    }
+}
+void ELangPatcher::PatchDllInvokeCall() {
+    ELang::PatternSearch::SearchMatcher pattern{{
+            {0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0x50, 0xB9},
+            PatternSegment::Skip(4),
+            {0xE8},
+            PatternSegment::Skip(4),
+            {0x5D, 0xC3},
+    }};
+
+    auto it = data_.begin();
+    while ((it = pattern.search(it, data_.end())) != data_.end()) {
+        auto offset = std::distance(data_.begin(), it);
+        auto ecx_value = read_u32(offset + pattern.offset_at_item(1));
+        auto call_delta = read_u32(offset + pattern.offset_at_item(3));
+        fprintf(stderr, "  INFO: [PatchDllInvokeCall] found (offset=0x%08x, ecx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ecx_value, call_delta);
+
+        auto snippet = GenerateDllFunctionCallStub(ecx_value, call_delta);
+        std::copy(snippet.cbegin(), snippet.cend(), it);
+        it += pattern.size();
     }
 }

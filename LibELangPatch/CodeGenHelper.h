@@ -162,10 +162,18 @@ protected:
         std::uniform_int_distribution<> dist_len(1, 4);
         getJunkInstByLen(dist_len(mt_), regs);
     }
+    inline void fillWithJunkSlideInst(size_t size, const std::initializer_list<Xbyak::Reg32> &regs) {
+        int junk_code_left = static_cast<int>(size);
+        while (junk_code_left > 0) {
+            auto this_round = rand_int(1, std::min(4, junk_code_left));
+            getJunkInstByLen(this_round, regs);
+            junk_code_left -= this_round;
+        }
+    }
     inline void fillWithJunk(size_t size, const std::initializer_list<Xbyak::Reg32> &regs) {
-        // too short to generate any junk code
-        if (size <= 2) {
-            nop(size, true);
+        // too short to have anything meaningful
+        if (size <= 20) {
+            fillWithJunkSlideInst(size, regs);
             return;
         }
 
@@ -176,47 +184,22 @@ protected:
         std::vector<uint8_t> buffer(size);
         std::generate(buffer.begin(), buffer.end(), gen_byte);
 
-        // too short to have anything meaningful
-        if (size <= 8) {
-            jmp(end_label, T_SHORT);
-            db(buffer.data(), size - 2);
-            L(end_label);
-        } else if (size <= 14) {
-            call(end_label);
-            db(buffer.data(), size - 6);
-            L(end_label);
+        int junk_inst_len = rand_int(6, 8);
+        bool use_slide = next_bool() && false;
 
-            std::uniform_int_distribution<> dist_reg{0, static_cast<int>(regs.size()) - 1};
-            const auto &reg = *(regs.begin() + dist_reg(mt_));
-            pop(reg);
-        } else {
-            int junk_inst_len = rand_int(1, 3);
-            bool use_slide = next_bool() && false;
+        int junk_padding = static_cast<int>(size) - 5 - 4 - 1 - junk_inst_len;
+        int padding_start = rand_int(2, junk_padding - 4);
+        int padding_end = junk_padding - padding_start;
 
-            int junk_padding = static_cast<int>(size) - 5 - 4 - 1 - junk_inst_len;
-            int padding_start = rand_int(1, junk_padding - 1);
-            int padding_end = junk_padding - padding_start;
-            //            printf("size=%d, padding[%d]=(%d, %d), junk=%d\n", int(size), junk_padding, padding_start, padding_end, junk_inst_len);
+        call(end_label);
+        db(buffer.data(), padding_start);
+        L(end_label);
 
-            call(end_label);
-            db(buffer.data(), padding_start);
-            L(end_label);
-            if (use_slide) {// unused
-                int padding_left = padding_end + 1 + 4;
-                while (padding_left > 0) {
-                    auto inst_len = rand_int(1, std::min(padding_left, 3));
-                    getJunkInstByLen(inst_len, regs);
-                    padding_left -= inst_len;
-                }
-            } else {
-                add(dword[esp], static_cast<int>(size) - 5);
-                getJunkInstByLen(junk_inst_len, regs);
-                ret();
-            }
+        add(dword[esp], static_cast<int>(size) - 5);
+        fillWithJunkSlideInst(junk_inst_len, regs);
+        ret();
 
-            std::generate(buffer.begin(), buffer.begin() + padding_end, gen_byte);
-            db(buffer.data(), padding_end);
-        }
+        fillWithJunkSlideInst(padding_end, regs);
     }
 
     inline void maybeGenJunk(const std::vector<Xbyak::Reg32> &regs) {

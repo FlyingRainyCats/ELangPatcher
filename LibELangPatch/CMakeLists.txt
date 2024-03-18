@@ -6,6 +6,8 @@ add_library(LibELangPatch STATIC
         ELangInitFnGen.cpp
         WndEventProxyGen.cpp
         VArgsProxyGen.cpp
+        DlLFunctionCallGen.cpp
+        DlLFunctionCallGen.cpp
 )
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)

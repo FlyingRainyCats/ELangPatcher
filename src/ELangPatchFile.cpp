@@ -57,6 +57,7 @@ bool ELangPatchFile(const fs::path &file_path, bool backup, bool fake_stub) {
     patcher.PatchWndEventHandlerMain();
     patcher.PatchWndEventHandlerSecondary();
     patcher.PatchKernelInvokeCall();
+    patcher.PatchDllInvokeCall();
     if (fake_stub) patcher.AddFakeEWndStub();
 
     {

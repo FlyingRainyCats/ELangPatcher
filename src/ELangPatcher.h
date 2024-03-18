@@ -13,6 +13,7 @@ public:
     void PatchWndEventHandlerMain();
     void PatchWndEventHandlerSecondary();
     void PatchKernelInvokeCall();
+    void PatchDllInvokeCall();
     void AddFakeEWndStub();
 
 private:
