@@ -186,6 +186,5 @@ private:
 };
 
 std::vector<uint8_t> GenerateWndHandlerCode(uint32_t call_inst_address, uint32_t call_inst_delta) {
-    WndHandlerGen c{call_inst_address, call_inst_delta};
-    return {c.getCode(), c.getCurr()};
+    return WndHandlerGen{call_inst_address, call_inst_delta}.vec();
 }

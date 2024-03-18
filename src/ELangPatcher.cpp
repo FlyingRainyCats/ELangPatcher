@@ -1,13 +1,14 @@
 #include "ELangPatcher.h"
 
-#include "ELangInitFnGen.h"
 #include "PEParser.h"
-#include "WndEventStub.h"
-#include "WndHandlerGen.h"
+
+#include <ELangInitFnGen.h>
+#include <WndEventProxyGen.h>
+#include <WndHandlerGen.h>
+#include <VArgsProxyGen.h>
 
 #include <algorithm>
 #include <array>
-#include <cinttypes>
 #include <random>
 
 #ifdef min
@@ -32,9 +33,9 @@ void ELangPatcher::PatchEWndV02() {
         auto offset = std::distance(data_.begin(), it);
         auto ecx_value = read_u32(offset + pattern.offset_at_item(1));
         auto call_delta = read_u32(offset + pattern.offset_at_item(3));
-        fprintf(stderr, "[PatchEWndV02] found (offset=0x%08x, ecx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ecx_value, call_delta);
+        fprintf(stderr, "  INFO: [PatchEWndV02] found (offset=0x%08x, ecx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ecx_value, call_delta);
 
-        auto snippet = GenerateWndEventStubSnippet(ecx_value, call_delta);
+        auto snippet = GenerateWndEventProxySnippet(ecx_value, call_delta);
         std::copy(snippet.cbegin(), snippet.cend(), it);
         it += pattern.size();
     }
@@ -67,7 +68,7 @@ void ELangPatcher::PatchEWndUltimate() {
         auto has_ole_offset = read_u32(offset + pattern.offset_at_item(7));
         auto wnd_data_address = read_u32(offset + pattern.offset_at_item(3));
         auto wnd_data_offset = static_cast<int32_t>(parser.RVAtoFOA(wnd_data_address));
-        fprintf(stderr, "[PatchEWndUltimate] found (offset=0x%08tx, data=0x%08x, wnd_data_offset=0x%08x)\n", offset, wnd_data_address, wnd_data_offset);
+        fprintf(stderr, "  INFO: [PatchEWndUltimate] found (offset=0x%08tx, data=0x%08x, wnd_data_offset=0x%08x)\n", offset, wnd_data_address, wnd_data_offset);
 
         std::copy_n(data_.begin() + wnd_data_offset, data_elang_header.size(), data_elang_header.begin());
 
@@ -82,10 +83,16 @@ void ELangPatcher::PatchEWndUltimate() {
         auto injected_code_ptr = parser.ExpandTextSection(snippet.size());
         std::copy_n(snippet.begin(), snippet.size(), injected_code_ptr);
 
-        fprintf(stderr, "  - stub added: 0x%08x (file offset: %08x)\n", static_cast<uint32_t>(parser.FOAtoRVA(injected_code_ptr - data_.data())), static_cast<uint32_t>(injected_code_ptr - data_.data()));
+        fprintf(stderr, "    - stub added: 0x%08x (file offset: %08x)\n", static_cast<uint32_t>(parser.FOAtoRVA(injected_code_ptr - data_.data())), static_cast<uint32_t>(injected_code_ptr - data_.data()));
         auto ptr_code = data_.data() + offset;
         ptr_code[0] = 0xE8;
         *reinterpret_cast<uint32_t *>(&ptr_code[1]) = injected_code_ptr - ptr_code - 5;
+
+        {
+            uint32_t len = std::uniform_int_distribution<uint32_t>(0x04, 0xFF)(mt) & 0xFC;
+            auto p_stack_offset = reinterpret_cast<uint32_t *>(data_.data() + offset - (0x00436A9F - 0x00436A88) + 2);
+            *p_stack_offset += len;
+        }
 
         // Write junk to where the header was
         std::generate(data_elang_header.begin(), data_elang_header.end(), mt);
@@ -122,7 +129,7 @@ void ELangPatcher::PatchWndEventHandlerMain() {
         auto it_end_of_function = pattern_end_of_function.search(it, it_end_of_function_end);
         auto eof_found = it_end_of_function != it_end_of_function_end;
         auto eof_offset = eof_found ? std::distance(data_.begin(), it_end_of_function) : 0;
-        fprintf(stderr, "[PatchWndEventHandlerMain] found (eof=%08tx, offset=0x%08tx, inst=0x%08x(p: 0x%08x), delta=0x%08x)\n", eof_offset, offset, call_inst_address_foa, call_inst_address, call_inst_delta);
+        fprintf(stderr, "  INFO: [PatchWndEventHandlerMain] found (eof=%08tx, offset=0x%08tx, inst=0x%08x(p: 0x%08x), delta=0x%08x)\n", eof_offset, offset, call_inst_address_foa, call_inst_address, call_inst_delta);
         if (!eof_found) {
             continue;
         }
@@ -146,7 +153,7 @@ void ELangPatcher::PatchWndEventHandlerMain() {
 
 void ELangPatcher::PatchWndEventHandlerSecondary() {
 }
-void ELangPatcher::AddEWndStub() {
+void ELangPatcher::AddFakeEWndStub() {
     std::vector<uint8_t> junk_data_inner = {
             // start of function
             0x55, 0x8B, 0xEC,
@@ -169,9 +176,49 @@ void ELangPatcher::AddEWndStub() {
     auto prefix_len = dist_padding(mt);
     auto suffix_len = dist_padding(mt);
     auto payload_len = prefix_len + junk_data_inner.size() + suffix_len;
-    fprintf(stderr, "[AddEWndStub] add stub (len=%d bytes)\n", static_cast<int>(payload_len));
+    fprintf(stderr, "  INFO: [AddFakeEWndStub] add stub (len=%d bytes)\n", static_cast<int>(payload_len));
 
     std::vector<uint8_t> junk_data(payload_len);
     std::generate(junk_data.begin(), junk_data.end(), mt);
     std::copy(junk_data.cbegin(), junk_data.cend(), parser.ExpandTextSection(payload_len));
+}
+
+void ELangPatcher::PatchKernelInvokeCall() {
+    std::vector<ELang::PatternSearch::SearchMatcher> patterns{
+            ELang::PatternSearch::SearchMatcher{{
+                    {0x8D, 0x54, 0x24, 0x08, 0x83, 0xEC, 0x0C, 0x52, 0xFF, 0x74, 0x24, 0x14, 0xC7, 0x44, 0x24, 0x08, 0x00, 0x00, 0x00, 0x00, 0xC7, 0x44, 0x24, 0x0C, 0x00, 0x00, 0x00, 0x00, 0xC7, 0x44, 0x24, 0x10, 0x00, 0x00, 0x00, 0x00, 0x8D, 0x54, 0x24, 0x08, 0x52, 0xFF, 0xD3, 0x8B, 0x44, 0x24, 0x0C, 0x8B, 0x54, 0x24, 0x10, 0x8B, 0x4C, 0x24, 0x14, 0x83, 0xC4, 0x18, 0xC3},
+            }},
+            ELang::PatternSearch::SearchMatcher{{
+                    {0x8D, 0x44, 0x24, 0x08, 0x83, 0xEC, 0x0C, 0x50, 0xFF, 0x74, 0x24, 0x14, 0x33, 0xC0, 0x89, 0x44, 0x24, 0x08, 0x89, 0x44, 0x24, 0x0C, 0x89, 0x44, 0x24, 0x10, 0x8D, 0x54, 0x24, 0x08, 0x52, 0xFF, 0xD3, 0x8B, 0x44, 0x24, 0x0C, 0x8B, 0x54, 0x24, 0x10, 0x8B, 0x4C, 0x24, 0x14, 0x83, 0xC4, 0x18, 0xC3},
+            }},
+    };
+
+    FlyingRainyCats::PEParser::PEParser<false> parser(data_.data());
+    std::mt19937 mt{std::random_device{}()};
+
+    int pattern_id{0};
+    for (auto& pattern: patterns) {
+        auto pattern_size = pattern.size();
+
+        auto it = data_.begin();
+        while ((it = pattern.search(it, data_.end())) != data_.end()) {
+            auto offset = std::distance(data_.begin(), it);
+            auto snippet = GenerateVArgsProxyCode();
+            for(int retries{3}; snippet.size() >= 0x40 && retries >= 0; retries--) {
+                snippet = GenerateVArgsProxyCode();
+            }
+
+            fprintf(stderr, "  INFO: [PatchKernelInvokeCall#%d] found (offset=0x%08tx, len=%04x, replace_len=%04x)\n", pattern_id,offset, static_cast<int>(pattern_size), static_cast<int>(snippet.size()));
+            std::copy(snippet.cbegin(), snippet.cend(), it);
+
+            if (pattern_size > snippet.size()) {
+                std::vector<uint8_t> junk(pattern_size - snippet.size());
+                std::generate(junk.begin(), junk.end(), mt);
+                std::copy(junk.begin(), junk.end(), it + static_cast<int>(snippet.size()));
+            }
+
+            it += pattern_size;
+        }
+        pattern_id ++;
+    }
 }

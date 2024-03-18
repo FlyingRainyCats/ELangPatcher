@@ -10,7 +10,7 @@
 
 namespace FlyingRainyCats {
     namespace PEParser {
-        template<boolean IMAGE_LOADED = false, boolean IS_64_BIT = false>
+        template<const bool IS_64_BIT = false>
         class PEParser {
         public:
             using INNER_IMAGE_NT_HEADERS = typename std::conditional_t<IS_64_BIT, IMAGE_NT_HEADERS64, IMAGE_NT_HEADERS32>;

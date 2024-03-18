@@ -4,7 +4,9 @@ project(LibELangPatcher)
 add_library(LibELangPatch STATIC
         WndHandlerGen.cpp
         ELangInitFnGen.cpp
-        WndEventStub.cpp)
+        WndEventProxyGen.cpp
+        VArgsProxyGen.cpp
+)
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)
 target_include_directories(LibELangPatch

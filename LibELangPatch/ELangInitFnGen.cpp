@@ -101,7 +101,5 @@ public:
 };
 
 std::vector<uint8_t> GenerateELangInitSnippet(uint32_t offset_process_heap, uint32_t offset_has_ole, uint32_t *header_data) {
-    InitHandlerGen code(offset_process_heap, offset_has_ole, header_data);
-    code.ready();
-    return {code.getCode(), code.getCurr()};
+    return InitHandlerGen{offset_process_heap, offset_has_ole, header_data}.vec();
 }

@@ -1,79 +1,70 @@
-#include "../SearchMatcher.h"
+#include "ELangPatchFile.h"
 #include "ELangPatcher.h"
 
 #include <filesystem>
-#include <fstream>
-#include <iostream>
+#include <string>
+
+#include <cxxopts.hpp>
 
 #include <Windows.h>
+#include <shellapi.h>
 
 namespace fs = std::filesystem;
 
-void print_help() {
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Usage: \n");
-    fprintf(stderr, "  ELangPatcher \"<path>\" \"[output_path=path]\"\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "  <path>   path to ELang compiled EXE file\n");
-    fprintf(stderr, "\n");
+std::string ConvertWideToUtf8(const std::wstring &wstr) {
+    if (wstr.empty()) return {};
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
+    std::string result(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, &result[0], sizeNeeded, nullptr, nullptr);
+    return result;
 }
 
 int main_unicode(int argc, wchar_t *argv[]) {
-    fwprintf(stderr, L"ELang Patcher v0.1 by FlyingRainyCats (爱飞的猫 @52pojie.cn)");
-    fprintf(stderr, "\n");
+    cxxopts::Options options("ELang-Patcher", "ELang AntiEWnd by FlyingRainyCats (爱飞的猫 @52pojie.cn)");
+    options.add_options()                                                                   //
+            ("b,backup", "Enable backup", cxxopts::value<bool>()->default_value("true"))    //
+            ("fake-stub", "Insert fake stub", cxxopts::value<bool>()->default_value("true"))//
+            ("h,help", "Show help")                                                         //
+            ("files", "The file(s) to process", cxxopts::value<std::vector<std::string>>());
 
-    if (argc <= 1) {
-        print_help();
+    options.parse_positional({"files"});
+
+    std::vector<std::string> args_utf8(argc);
+    std::vector<char *> argv_utf8(argc);
+    for (int i = 0; i < argc; i++) {
+        args_utf8[i] = ConvertWideToUtf8(argv[i]);
+        argv_utf8[i] = args_utf8[i].data();
+    }
+    auto result = options.parse(argc, argv_utf8.data());
+    if (result.count("help")) {
+        fputs(options.help().c_str(), stderr);
         return 0;
     }
-    fs::path exe_file(argv[1]);
-    fs::path output_file(argv[argc > 2 ? 2: 1]);
-    if (!fs::exists(exe_file)) {
-        std::cerr << "File does not exist." << std::endl;
-        return 1;
+    fprintf(stderr, "ELang Patcher v0.1 by FlyingRainyCats (爱飞的猫 @52pojie.cn)\n");
+    const auto file_count = result.count("files");
+    if (file_count == 0) {
+        fprintf(stderr, "ERROR: no input files specified\n");
+        return 999;
     }
+    auto files = result["files"].as<std::vector<std::string>>();
 
-    if (fs::exists(output_file)) {
-        auto bak_file{output_file};
-        bak_file.replace_extension(output_file.extension().u8string() + u8".bak");
-        if (!fs::exists(bak_file)) {
-            std::error_code ec_backup{};
-            fs::copy_file(exe_file, bak_file, ec_backup);
-            if (ec_backup) {
-                std::cerr << "backup failed: " << ec_backup.message() << std::endl;
-                return 2;
-            }
+    auto error_count{0};
+    auto fake_stub = result["fake-stub"].as<bool>();
+    auto backup = result["backup"].as<bool>();
+    for (auto &file_path: files) {
+        std::u8string temp_path(file_path.cbegin(), file_path.cend());
+        fs::path exe_path{temp_path};
+        fprintf(stderr, "INFO: processing: %s\n", exe_path.string().c_str());
+        if (!ELangPatchFile(exe_path, backup, fake_stub)) {
+            error_count++;
         }
     }
-
-    auto exe_file_size = static_cast<std::streamsize>(fs::file_size(exe_file));
-    std::vector<uint8_t> exe_data(exe_file_size);
-    {
-        std::ifstream ifs(exe_file, std::ifstream::binary);
-        ifs.read(reinterpret_cast<char *>(exe_data.data()), exe_file_size);
-        ifs.close();
-    }
-
-    ELangPatcher patcher(exe_data);
-    patcher.PatchEWndV02();
-    patcher.PatchEWndUltimate();
-    patcher.PatchWndEventHandlerMain();
-    patcher.PatchWndEventHandlerSecondary();
-//    patcher.AddEWndStub();
-    {
-        std::ofstream ofs(output_file, std::ifstream::binary);
-        if (!ofs.is_open()) {
-            fprintf(stderr, "ERR: could not open file for output!\n");
-        } else {
-           ofs.write(reinterpret_cast<char*>(exe_data.data()), static_cast<std::streamsize>(exe_data.size()));
-        }
-        ofs.close();
-    }
-
-    return 0;
+    return error_count;
 }
 
 int main() {
+    setlocale(LC_ALL, ".UTF8");
+
     int argc{0};
     auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     return main_unicode(argc, argv);

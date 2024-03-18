@@ -12,7 +12,8 @@ public:
     void PatchEWndUltimate();
     void PatchWndEventHandlerMain();
     void PatchWndEventHandlerSecondary();
-    void AddEWndStub();
+    void PatchKernelInvokeCall();
+    void AddFakeEWndStub();
 
 private:
     std::span<uint8_t> data_;

@@ -11,21 +11,57 @@
 #endif
 
 class CodeGenHelper : public Xbyak::CodeGenerator {
+public:
+    [[nodiscard]] inline std::vector<uint8_t> vec() {
+        ready();
+        return {getCode(), getCurr()};
+    }
+
 protected:
+    typedef std::vector<std::function<void()>> ExecItem;
+    typedef Xbyak::Reg32 Reg32;
+    typedef std::vector<Reg32> Reg32List;
+
     std::mt19937 mt_{std::random_device{}()};
     template<typename T>
     inline std::vector<T> shuffled(std::vector<T> items) {
         std::shuffle(items.begin(), items.end(), mt_);
         return items;
     }
-    inline void shuffle_exec(std::vector<std::function<void(void *)>> items) {
+    template<typename T>
+    inline void shuffle(T &items) {
         std::shuffle(items.begin(), items.end(), mt_);
+    }
 
+    inline void shuffle_exec_2(ExecItem &items) {
         while (!items.empty()) {
+            std::shuffle(items.begin(), items.end(), mt_);
+            auto next_fn = items.back();
+            items.pop_back();
+            next_fn();
+        }
+    }
+    inline void set_zero(Xbyak::Operand &reg) {
+        if (reg.getKind() == Xbyak::Operand::REG) {
+            pick_exec({
+                    [&]() { xor_(reg, reg); },
+                    [&]() { mov(reg, 0); },
+                    [&]() { and_(reg, 0); },
+            });
+        } else {
+            pick_exec({
+                    [&]() { mov(reg, 0); },
+                    [&]() { and_(reg, 0); },
+            });
+        }
+    }
+
+    inline void shuffle_exec(std::vector<std::function<void(void *)>> items) {
+        while (!items.empty()) {
+            std::shuffle(items.begin(), items.end(), mt_);
             auto next_fn = items.back();
             items.pop_back();
             next_fn(&items);
-            std::shuffle(items.begin(), items.end(), mt_);
         }
     }
     inline void shuffle_exec(std::vector<std::function<void()>> items) {
@@ -40,6 +76,11 @@ protected:
             auto &it = *(items.begin() + distr(mt_));
             it();
         }
+    }
+    template<typename T>
+    inline T pick_random_item(std::vector<T> items) {
+        std::uniform_int_distribution<> distr(0, int(items.size() - 1));
+        return items.at(distr(mt_));
     }
     std::uniform_int_distribution<> dist_bool_{0, 1};
     inline bool next_bool() {
@@ -105,8 +146,8 @@ protected:
                             Xbyak::Reg32 index_reg;
                             do {
                                 index_reg = rand_ro_reg();
-                            } while(index_reg == esp);
-                            lea(rand_reg(), ptr[rand_ro_reg() + rand_ro_reg() * rand_lea_multiplier() + rand_signed_byte()]);
+                            } while (index_reg == esp);
+                            lea(rand_reg(), ptr[rand_ro_reg() + index_reg * rand_lea_multiplier() + rand_signed_byte()]);
                         },
                         [&]() { lea(rand_reg(), ptr[rand_ro_reg() + rand_signed_byte()]); },
                 });
@@ -194,5 +235,13 @@ std::optional<T> find_and_remove_item(std::vector<T> &list, F fn) {
         result = std::make_optional<T>(std::move(*it));
         list.erase(it);
     }
+    return result;
+}
+
+template<typename T>
+inline T pop_last_item(std::vector<T> &list) {
+    T result{};
+    result = std::move(list.back());
+    list.pop_back();
     return result;
 }

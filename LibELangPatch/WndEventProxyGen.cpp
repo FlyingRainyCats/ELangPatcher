@@ -1,4 +1,4 @@
-#include "include/WndEventStub.h"
+#include "include/WndEventProxyGen.h"
 
 #include "CodeGenHelper.h"
 
@@ -20,8 +20,6 @@ private:
     uint32_t call_delta_{};
 };
 
-std::vector<uint8_t> GenerateWndEventStubSnippet(uint32_t ecx_value, uint32_t call_delta) {
-    WndEventProxyStubGen code(ecx_value, call_delta);
-    code.ready();
-    return {code.getCode(), code.getCurr()};
+std::vector<uint8_t> GenerateWndEventProxySnippet(uint32_t ecx_value, uint32_t call_delta) {
+    return WndEventProxyStubGen{ecx_value, call_delta}.vec();
 }

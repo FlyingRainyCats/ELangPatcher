@@ -3,7 +3,7 @@
 #include <random>
 
 #include "../LibELangPatch/include/ELangInitFnGen.h"
-#include "../LibELangPatch/include/WndEventStub.h"
+#include "../LibELangPatch/include/WndEventProxyGen.h"
 #include "../LibELangPatch/include/WndHandlerGen.h"
 
 void print_shellcode(const std::vector<uint8_t>& code) {
@@ -22,7 +22,7 @@ int main() {
     printf("ELangInitSnippet: %zu bytes\n", elang_init_code.size());
     print_shellcode(elang_init_code);
 
-    auto elang_wnd_proc_stub = GenerateWndEventStubSnippet(0x4AF608, 0xFFFFC787);
+    auto elang_wnd_proc_stub = GenerateWndEventProxySnippet(0x4AF608, 0xFFFFC787);
     printf("ELangWndProcStub: %zu bytes\n", elang_wnd_proc_stub.size());
     print_shellcode(elang_wnd_proc_stub);
 
