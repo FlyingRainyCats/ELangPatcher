@@ -6,6 +6,8 @@ add_library(LibELangPatch STATIC
         ELangInitFnGen.cpp
         CallProxyStubWithEcxGen.cpp
         VArgsProxyGen.cpp
+        ELangLoaderInitGen.cpp
+        include/ELangLoaderInitGen.h
 )
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)

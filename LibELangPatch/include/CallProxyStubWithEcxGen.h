@@ -24,3 +24,5 @@
  * @return
  */
 std::vector<uint8_t> GenerateCallProxyStubWithEcx(int pre_junk_len, int post_junk_len, uint32_t ecx_value, uint32_t call_delta);
+
+std::vector<uint8_t> GenerateCallProxyStubWithEcxCdecl(int arg_count, int pre_junk_len, int post_junk_len, uint32_t ecx_value, uint32_t call_delta);

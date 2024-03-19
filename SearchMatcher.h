@@ -39,6 +39,10 @@ namespace ELang::PatternSearch {
             }
         }
 
+        [[nodiscard]] size_t pattern_count() const {
+            return pattern_.size();
+        }
+
         [[nodiscard]] size_t offset_at_item(size_t idx) const {
             size_t offset = 0;
             for (size_t i = 0; i < idx; ++i) {

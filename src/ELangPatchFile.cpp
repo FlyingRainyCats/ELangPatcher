@@ -47,6 +47,7 @@ bool ELangPatchFile(const fs::path &file_path, const std::u8string &suffix, bool
 
     auto file_size = static_cast<std::streamsize>(fs::file_size(file_path));
     std::vector<uint8_t> exe_data(file_size);
+    exe_data.reserve(file_size * 2 + 0x4000);
     {
         std::ifstream ifs(file_path, std::ifstream::binary);
         if (!ifs.is_open()) {
@@ -62,7 +63,8 @@ bool ELangPatchFile(const fs::path &file_path, const std::u8string &suffix, bool
     patcher.PatchWndEventHandlerMain();
     patcher.PatchWndEventHandlerSecondary();
     patcher.PatchKernelInvokeCall();
-    patcher.PatchDllInvokeCall();
+    patcher.PatchProxyStub();
+    patcher.PatchELangLoaderInitStub();
     if (fake_stub) patcher.AddFakeEWndStub();
 
     {

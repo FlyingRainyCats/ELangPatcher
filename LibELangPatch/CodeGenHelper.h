@@ -9,6 +9,9 @@
 #ifdef min
 #undef min
 #endif
+#ifdef max
+#undef max
+#endif
 
 class CodeGenHelper : public Xbyak::CodeGenerator {
 public:
@@ -70,8 +73,8 @@ protected:
             fn();
         }
     }
-    inline void pick_exec(const std::initializer_list<std::function<void()>> &items) {
-        if (items.size() != 0) {
+    inline void pick_exec(const std::vector<std::function<void()>> &items) {
+        if (!items.empty()) {
             std::uniform_int_distribution<> distr(0, int(items.size() - 1));
             auto &it = *(items.begin() + distr(mt_));
             it();
@@ -156,13 +159,13 @@ protected:
             case 0:
             default:
                 break;
-        };
+        }
     }
-    inline void genJunk(const std::vector<Xbyak::Reg32> &regs) {
+    inline void genJunk(const std::vector<Reg32> &regs) {
         std::uniform_int_distribution<> dist_len(1, 4);
         getJunkInstByLen(dist_len(mt_), regs);
     }
-    inline void fillWithJunkSlideInst(size_t size, const std::initializer_list<Xbyak::Reg32> &regs) {
+    inline void fillWithJunkSlideInst(size_t size, const std::vector<Reg32> &regs) {
         int junk_code_left = static_cast<int>(size);
         while (junk_code_left > 0) {
             auto this_round = rand_int(1, std::min(4, junk_code_left));
@@ -170,7 +173,7 @@ protected:
             junk_code_left -= this_round;
         }
     }
-    inline void fillWithJunk(size_t size, const std::initializer_list<Xbyak::Reg32> &regs) {
+    inline void fillWithJunk(size_t size, const std::vector<Reg32> &regs) {
         // too short to have anything meaningful
         if (size <= 20) {
             fillWithJunkSlideInst(size, regs);
