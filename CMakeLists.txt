@@ -12,7 +12,22 @@ add_executable(ELangPatcher
         src/ELangPatcher.h
         src/main.cpp
         src/ELangPatchFile.cpp
+        src/ELangPatcher/ELangPatcherImpl.h
+        src/ELangPatcher/PatchEWndV02.cpp
+        src/ELangPatcher/PatchEWndV02.cpp
+        src/ELangPatcher/PatchEWndUltimate.cpp
+        src/ELangPatcher/PatchEWndUltimate.cpp
+        src/ELangPatcher/PatchWndEventHandlerMain.cpp
+        src/ELangPatcher/PatchKernelInvokeCall.cpp
+        src/ELangPatcher/PatchKernelInvokeCall.cpp
+        src/ELangPatcher/PatchProxyStub.cpp
+        src/ELangPatcher/PatchAddFakeEWndStub.cpp
+        src/ELangPatcher/PatchELangLoaderInitStub.cpp
 )
 target_include_directories(ELangPatcher PRIVATE vendor/cxxopts/include)
 target_compile_definitions(ELangPatcher PRIVATE WIN32_LEAN_AND_MEAN=1)
 target_link_libraries(ELangPatcher LibELangPatch)
+
+if(MSVC)
+    target_compile_options(ELangPatcher PRIVATE "/MP")
+endif()

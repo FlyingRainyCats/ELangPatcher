@@ -57,15 +57,14 @@ bool ELangPatchFile(const fs::path &file_path, const std::u8string &suffix, bool
         ifs.read(reinterpret_cast<char *>(exe_data.data()), file_size);
     }
 
-    ELangPatcher patcher(exe_data);
-    patcher.PatchEWndV02();
-    patcher.PatchEWndUltimate();
-    patcher.PatchWndEventHandlerMain();
-    patcher.PatchWndEventHandlerSecondary();
-    patcher.PatchKernelInvokeCall();
-    patcher.PatchProxyStub();
-    patcher.PatchELangLoaderInitStub();
-    if (fake_stub) patcher.AddFakeEWndStub();
+    auto patcher = MakeELangPatcher(exe_data);
+    patcher->PatchEWndV02();
+    patcher->PatchEWndUltimate();
+    patcher->PatchWndEventHandlerMain();
+    patcher->PatchKernelInvokeCall();
+    patcher->PatchProxyStub();
+    patcher->PatchELangLoaderInitStub();
+    if (fake_stub) patcher->PatchAddFakeEWndStub();
 
     {
         std::ofstream ofs(output_path, std::ifstream::binary);

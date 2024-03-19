@@ -17,13 +17,13 @@
 
 namespace FlyingRainyCats {
     namespace helper {
-        uint32_t round_up_to_section_size(uint32_t size) {
+        inline uint32_t round_up_to_section_size(uint32_t size) {
             if (size % 0x1000 != 0) {
                 size += 0x1000 - (size % 0x1000);
             }
             return size;
         }
-    }
+    }// namespace helper
 
     namespace PEParser {
         template<const bool IS_64_BIT = false>
@@ -34,9 +34,8 @@ namespace FlyingRainyCats {
             using INNER_PIMAGE_DOS_HEADER = PIMAGE_DOS_HEADER;
             using INNER_PIMAGE_OPTIONAL_HEADER = typename std::conditional_t<IS_64_BIT, PIMAGE_OPTIONAL_HEADER64, PIMAGE_OPTIONAL_HEADER32>;
 
-            std::vector<uint8_t>& exe_data_;
-            inline PEParser(std::vector<uint8_t>& exe_data): exe_data_(exe_data) {
-            }
+            std::vector<uint8_t> &exe_data_;
+            inline explicit PEParser(std::vector<uint8_t> &exe_data) : exe_data_(exe_data) {}
 
             inline INNER_PIMAGE_NT_HEADERS GetNtHeader() const {
                 return INNER_PIMAGE_NT_HEADERS(exe_data_.data() + INNER_PIMAGE_DOS_HEADER(exe_data_.data())->e_lfanew);
@@ -82,14 +81,14 @@ namespace FlyingRainyCats {
                 return 0;
             }
 
-            inline uint8_t* ExpandTextSection(uint32_t size) {
+            inline uint8_t *ExpandTextSection(uint32_t size) {
                 auto p_nt_header = INNER_PIMAGE_NT_HEADERS((uint8_t *) (exe_data_.data()) + PIMAGE_DOS_HEADER(exe_data_.data())->e_lfanew);
                 auto p_file_header = &p_nt_header->FileHeader;
                 auto section_count = std::size_t(p_file_header->NumberOfSections);
 
                 auto section = (PIMAGE_SECTION_HEADER) ((uint8_t *) (p_nt_header) + offsetof(INNER_IMAGE_NT_HEADERS, OptionalHeader) + p_nt_header->FileHeader.SizeOfOptionalHeader);
 
-                auto& image_size = GetNtOptionalHeader()->SizeOfImage;
+                auto &image_size = GetNtOptionalHeader()->SizeOfImage;
 
                 for (std::size_t i = 0; i < section_count; i++) {
                     if (strcmp((char *) section->Name, ".text") == 0) {
