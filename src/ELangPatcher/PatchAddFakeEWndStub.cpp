@@ -1,6 +1,6 @@
 #include "ELangPatcherImpl.h"
 
-void ELangPatcherImpl::PatchAddFakeEWndStub() {
+void ELangPatcherImpl::MiscAddFakeEWndStub() {
     std::vector<uint8_t> junk_data_inner = {
             // start of function
             0x55, 0x8B, 0xEC,
@@ -19,6 +19,6 @@ void ELangPatcherImpl::PatchAddFakeEWndStub() {
     auto prefix_len = rand_int(0x10, 0x20);
     auto suffix_len = rand_int(0x10, 0x20);
     auto payload_len = prefix_len + junk_data_inner.size() + suffix_len;
-    fprintf(stderr, "  INFO: [PatchAddFakeEWndStub] add stub (len=%d bytes)\n", static_cast<int>(payload_len));
+    fprintf(stderr, "  INFO: [MiscAddFakeEWndStub] add stub (len=%d bytes)\n", static_cast<int>(payload_len));
     std::generate_n(pe_.ExpandTextSection(payload_len), payload_len, mt_);
 }

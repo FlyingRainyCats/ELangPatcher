@@ -58,13 +58,8 @@ bool ELangPatchFile(const fs::path &file_path, const std::u8string &suffix, bool
     }
 
     auto patcher = MakeELangPatcher(exe_data);
-    patcher->PatchEWndV02();
-    patcher->PatchEWndUltimate();
-    patcher->PatchWndEventHandlerMain();
-    patcher->PatchKernelInvokeCall();
-    patcher->PatchProxyStub();
-    patcher->PatchELangLoaderInitStub();
-    if (fake_stub) patcher->PatchAddFakeEWndStub();
+    patcher->PatchAll();
+    if (fake_stub) patcher->MiscAddFakeEWndStub();
 
     {
         std::ofstream ofs(output_path, std::ifstream::binary);

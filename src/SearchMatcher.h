@@ -51,6 +51,10 @@ namespace ELang::PatternSearch {
             return offset;
         }
 
+        [[nodiscard]] size_t size_at_item(size_t idx) const {
+            return pattern_[idx].len_;
+        }
+
         template<typename It>
         bool matches(It first) const {
             for (const auto &segment: pattern_) {

@@ -19,7 +19,7 @@ public:
 
 void ELangPatcherImpl::PatchProxyStub() {
     std::vector<ProxyStubContainer> patterns{
-            {"DLLInvokeCall", 1,
+            {"ELibInvokeCall", 1,
              {
                      {0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0x50, 0xB9},
                      PatternSegment::Skip(4),

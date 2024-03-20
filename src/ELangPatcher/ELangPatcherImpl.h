@@ -16,13 +16,15 @@ class ELangPatcherImpl : public ELangPatcher {
 public:
     explicit ELangPatcherImpl(std::vector<uint8_t>& data): data_(data), pe_(data_), mt_(std::random_device{}()) {}
 
+    void PatchDllFunctionInvokeCall() override;
     void PatchEWndV02() override;
     void PatchEWndUltimate() override;
     void PatchWndEventHandlerMain() override;
     void PatchKernelInvokeCall() override;
     void PatchProxyStub() override;
+    void PatchLoadWndCall() override;
     void PatchELangLoaderInitStub() override;
-    void PatchAddFakeEWndStub() override;
+    void MiscAddFakeEWndStub() override;
 
 private:
     std::vector<uint8_t>& data_;

@@ -18,8 +18,6 @@ void ELangPatcherImpl::PatchEWndUltimate() {
             {0x42, 0x85, 0xC0, 0x89, 0x93, 0xCC, 0x00, 0x00, 0x00},
     }};
 
-    FlyingRainyCats::PEParser::PEParser<false> parser(data_);
-
     std::array<uint8_t, 12> data_elang_header{};
     constexpr size_t kPostCallJunkLen = 0x2F;
 
@@ -29,7 +27,7 @@ void ELangPatcherImpl::PatchEWndUltimate() {
         auto heap_offset = read_u32(offset + pattern.offset_at_item(1));
         auto has_ole_offset = read_u32(offset + pattern.offset_at_item(7));
         auto wnd_data_address = read_u32(offset + pattern.offset_at_item(3));
-        auto wnd_data_offset = static_cast<int32_t>(parser.RVAtoFOA(wnd_data_address));
+        auto wnd_data_offset = static_cast<int32_t>(pe_.RVAtoFOA(wnd_data_address));
         fprintf(stderr, "  INFO: [PatchEWndUltimate] found (offset=0x%08tx, data=0x%08x, wnd_data_offset=0x%08x)\n", offset, wnd_data_address, wnd_data_offset);
 
         std::copy_n(data_.begin() + wnd_data_offset, data_elang_header.size(), data_elang_header.begin());
@@ -38,7 +36,7 @@ void ELangPatcherImpl::PatchEWndUltimate() {
         size_t pre_stub_junk_len = rand_int(0x04, 0x20);
         size_t post_stub_junk_len = rand_int(0x04, 0x20);
         auto snippet = GenerateELangInitSnippet(heap_offset, has_ole_offset, reinterpret_cast<uint32_t *>(data_elang_header.data()));
-        auto injected_code_ptr = parser.ExpandTextSection(pre_stub_junk_len + snippet.size() + post_stub_junk_len);
+        auto injected_code_ptr = pe_.ExpandTextSection(pre_stub_junk_len + snippet.size() + post_stub_junk_len);
         it = data_.begin() + offset;
 
         // Write junk + stub + junk
@@ -47,7 +45,7 @@ void ELangPatcherImpl::PatchEWndUltimate() {
         std::generate_n(injected_code_ptr + pre_stub_junk_len + snippet.size(), post_stub_junk_len, mt_);
 
         auto offset_stub = injected_code_ptr + pre_stub_junk_len - data_.data();
-        fprintf(stderr, "    - stub added: 0x%08x (file offset: %08x)\n", static_cast<uint32_t>(parser.FOAtoRVA(offset_stub)), static_cast<uint32_t>(offset_stub));
+        fprintf(stderr, "    - stub added: 0x%08x (file offset: %08x)\n", static_cast<uint32_t>(pe_.FOAtoRVA(offset_stub)), static_cast<uint32_t>(offset_stub));
         write_call(offset, offset_stub);
 
         // Stack frame adjustment to bypass some sig matching

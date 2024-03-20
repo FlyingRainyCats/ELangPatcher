@@ -1,8 +1,10 @@
 #pragma once
 
+#include <bit>
 #include <functional>
 #include <optional>
 #include <random>
+#include <stack>
 
 #include "../vendor/xbyak/xbyak/xbyak.h"
 
@@ -12,6 +14,113 @@
 #ifdef max
 #undef max
 #endif
+
+class IntGenerator {
+public:
+    enum class OpCode {
+        XOR = 0,
+        ADD,
+        SUB,
+        ROR,
+        ROL,
+        NEG,
+        NOT,
+
+        MOV = 0x10,
+    };
+
+    inline IntGenerator(int steps, uint32_t value) {
+        std::uniform_int_distribution<> dist_u32_bits(1, 31);
+        std::uniform_int_distribution<> dist(0, 6);
+        std::mt19937 mt(std::random_device{}());
+        auto next_opcode = [&]() { return static_cast<OpCode>(dist(mt)); };
+
+        auto v{value};
+        for (int i = 0; i < steps; i++) {
+            auto opcode = next_opcode();
+            auto operand = mt();
+            if (mt() & 1) {
+                operand &= 0x7F;
+            }
+            switch (opcode) {
+                case OpCode::XOR:
+                    v ^= operand;
+                    break;
+                case OpCode::ADD:
+                    v -= operand;
+                    break;
+                case OpCode::SUB:
+                    v += operand;
+                    break;
+                case OpCode::ROR:
+                    operand = dist_u32_bits(mt);
+                    v = std::rotl(v, static_cast<int>(operand));
+                    break;
+                case OpCode::ROL:
+                    operand = dist_u32_bits(mt);
+                    v = std::rotr(v, static_cast<int>(operand));
+                    break;
+                case OpCode::NEG:
+                    operand = 0;
+                    v = -v;
+                    break;
+                case OpCode::NOT:
+                    operand = 0;
+                    v = ~v;
+                    break;
+
+                // special: do nothing
+                case OpCode::MOV: break;
+            }
+            steps_.emplace(opcode, operand);
+        }
+        steps_.emplace(OpCode::MOV, v);
+    }
+    inline bool generate_step(Xbyak::CodeGenerator& code, const Xbyak::Operand& op) {
+        if (steps_.empty()) {
+            return true;
+        }
+
+        auto [opcode, operand] = steps_.top();
+        steps_.pop();
+
+        switch (opcode) {
+            case OpCode::XOR:
+                code.xor_(op, operand);
+                break;
+            case OpCode::ADD:
+                code.add(op, operand);
+                break;
+            case OpCode::SUB:
+                code.sub(op, operand);
+                break;
+            case OpCode::ROR:
+                code.ror(op, static_cast<int>(operand));
+                break;
+            case OpCode::ROL:
+                code.rol(op, static_cast<int>(operand));
+                break;
+            case OpCode::NEG:
+                code.neg(op);
+                break;
+            case OpCode::NOT:
+                code.not_(op);
+                break;
+            case OpCode::MOV:
+                code.mov(op, operand);
+                break;
+        }
+
+        return steps_.empty();
+    }
+
+    inline bool done() {
+        return steps_.empty();
+    }
+
+private:
+    std::stack<std::pair<OpCode, uint32_t>> steps_{};
+};
 
 class CodeGenHelper : public Xbyak::CodeGenerator {
 public:
@@ -156,6 +265,12 @@ protected:
                 });
                 break;
 
+            case 5:
+                pick_exec({
+                        [&]() { mov(rand_reg(), mt_()); },
+                });
+                break;
+
             case 0:
             default:
                 break;
@@ -188,7 +303,6 @@ protected:
         std::generate(buffer.begin(), buffer.end(), gen_byte);
 
         int junk_inst_len = rand_int(6, 8);
-        bool use_slide = next_bool() && false;
 
         int junk_padding = static_cast<int>(size) - 5 - 4 - 1 - junk_inst_len;
         int padding_start = rand_int(2, junk_padding - 4);

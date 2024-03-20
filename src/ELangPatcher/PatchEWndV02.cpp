@@ -22,4 +22,3 @@ void ELangPatcherImpl::PatchEWndV02() {
         it += pattern.size();
     }
 }
-

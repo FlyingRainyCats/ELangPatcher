@@ -23,6 +23,8 @@ add_executable(ELangPatcher
         src/ELangPatcher/PatchProxyStub.cpp
         src/ELangPatcher/PatchAddFakeEWndStub.cpp
         src/ELangPatcher/PatchELangLoaderInitStub.cpp
+        src/ELangPatcher/PatchDllResolveAndCall.cpp
+        src/ELangPatcher/PatchLoadWndCall.cpp
 )
 target_include_directories(ELangPatcher PRIVATE vendor/cxxopts/include)
 target_compile_definitions(ELangPatcher PRIVATE WIN32_LEAN_AND_MEAN=1)

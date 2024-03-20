@@ -6,9 +6,6 @@ void ELangPatcherImpl::PatchELangLoaderInitStub() {
             {0xFC, 0xDB, 0xE3, 0xE8, 0xEC},
     }};
 
-    FlyingRainyCats::PEParser::PEParser<false> parser(data_);
-    std::mt19937 mt{std::random_device{}()};
-
     auto it = data_.begin();
     while ((it = pattern.search(it, data_.end())) != data_.end()) {
         auto offset = std::distance(data_.begin(), it);
@@ -18,7 +15,7 @@ void ELangPatcherImpl::PatchELangLoaderInitStub() {
 
         // Generate call inst
         auto snippet = GenerateELangLoaderInit({call_delta + 3});
-        auto p_snippet_out = parser.ExpandTextSection(snippet.size());
+        auto p_snippet_out = pe_.ExpandTextSection(snippet.size());
         it = data_.begin() + offset;
         std::copy(snippet.cbegin(), snippet.cend(), p_snippet_out);
 

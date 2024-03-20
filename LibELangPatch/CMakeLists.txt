@@ -8,6 +8,10 @@ add_library(LibELangPatch STATIC
         VArgsProxyGen.cpp
         ELangLoaderInitGen.cpp
         include/ELangLoaderInitGen.h
+        ResolveCallDllFunctionGen.cpp
+        include/ResolveCallDllFunctionGen.h
+        ELangBulkPushGen.cpp
+        include/ELangBulkPushGen.h
 )
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)
