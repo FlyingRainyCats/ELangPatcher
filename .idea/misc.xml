@@ -5,5 +5,8 @@
     <libraryRoots>
       <file path="$PROJECT_DIR$/vendor" />
     </libraryRoots>
+    <excludeRoots>
+      <file path="$PROJECT_DIR$/cmake-build-debug" />
+    </excludeRoots>
   </component>
 </project>
