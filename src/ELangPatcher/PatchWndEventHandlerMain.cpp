@@ -33,7 +33,7 @@ void ELangPatcherImpl::PatchWndEventHandlerMain() {
 
         auto padding_beg = rand_int(2, 7);
         auto padding_end = rand_int(2, 7);
-        auto snippet = GenerateWndHandlerCode(static_cast<uint32_t>(call_rva), call_inst_delta);
+        auto snippet = GenerateWndHandlerCode(static_cast<uint32_t>(call_rva), call_inst_delta + pattern.size_at_item(0));
 
         auto ptr_output = pe_.ExpandTextSection(padding_beg + snippet.size() + padding_end);
         it = data_.begin() + offset;
@@ -43,7 +43,7 @@ void ELangPatcherImpl::PatchWndEventHandlerMain() {
         std::generate_n(ptr_output + padding_beg + snippet.size(), padding_end, mt_);
 
         std::generate_n(it, function_size, mt_);
-        write_jmp(offset, ptr_output + padding_beg - data_.data());
+        write_call(offset, ptr_output + padding_beg - data_.data());
         code_caves_.emplace_back(offset + 5, function_size - 5);
     }
 }

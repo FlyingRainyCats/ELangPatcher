@@ -8,20 +8,28 @@ public:
         if (next_bool()) {
             ebx_offset &= 0x7F;
         }
-//        ebx_offset = 0;
         // ebx_offset &= 0b1111'1100;
         fillWithJunk((mt_() & 0b1111) | 1, {ecx, edx, esi, edi});
 
-        auto regs = shuffled<Xbyak::Reg32>({eax, ebx, ecx, edx, esi, edi});
+        auto regs = shuffled<Xbyak::Reg32>({ecx, edx, esi, edi});
 
-        auto reg_temp_heap = *find_and_remove_item(regs, [&](auto& r) { return r != ebx; });
-        auto new_ebx = *find_and_remove_item(regs, [&](auto& r) { return true; });
+        auto reg_temp_heap = pop_last_item(regs);
+        auto new_ebx = pop_last_item(regs);
 
-        if (reg_temp_heap != eax) {
-            mov(reg_temp_heap, eax);
-        }
+        shuffle_exec({
+                [&]() {
+                    genJunk(regs);
+                    mov(reg_temp_heap, eax);
+                    regs.push_back(eax);
+                },
+                [&]() {
+                    genJunk(regs);
+                    mov(new_ebx, ebx);
+                    regs.push_back(ebx);
+                },
+        });
 
-        auto mov_to_value = [&](const Xbyak::Operand& op, uint32_t imm) {
+        auto mov_to_value = [&](const Xbyak::Operand &op, uint32_t imm) {
             if (imm == 0) {
                 pick_exec({
                         [&]() { mov(op, imm); },
@@ -32,29 +40,24 @@ public:
             }
         };
 
+        lea(new_ebx, ptr[new_ebx + ebx_offset]);
         shuffle_exec({
-                [&](void *) { genJunk(regs); },
-                [&](void *p_vec) {
-                    lea(new_ebx, ptr[ebx + ebx_offset]);
-
-                    auto &vec = *reinterpret_cast<std::vector<std::function<void(void *)>> *>(p_vec);
-                    vec.emplace_back([&](void *) { genJunk(regs); });
-                    vec.emplace_back([&](void *) { genJunk(regs); });
-                    vec.emplace_back([&](void *) { genJunk(regs); });
-                    vec.emplace_back([&](void *) { mov_to_value(dword[new_ebx + (0xC4 - ebx_offset)], header_data[0]); });
-                    vec.emplace_back([&](void *) { mov_to_value(dword[new_ebx + (0xC8 - ebx_offset)], header_data[1]); });
-                    vec.emplace_back([&](void *) { mov_to_value(dword[new_ebx + (0xCC - ebx_offset)], header_data[2] + 1); });
-                    vec.emplace_back([&](void *) {
-                        mov(dword[new_ebx + (offset_process_heap - ebx_offset)], reg_temp_heap);
-                        regs.push_back(reg_temp_heap);
-                    });
+                [&]() { genJunk(regs); },
+                [&]() { genJunk(regs); },
+                [&]() { genJunk(regs); },
+                [&]() { mov_to_value(dword[new_ebx + (0xC4 - ebx_offset)], header_data[0]); },
+                [&]() { mov_to_value(dword[new_ebx + (0xC8 - ebx_offset)], header_data[1]); },
+                [&]() { mov_to_value(dword[new_ebx + (0xCC - ebx_offset)], header_data[2] + 1); },
+                [&]() {
+                    mov(dword[new_ebx + (offset_process_heap - ebx_offset)], reg_temp_heap);
+                    regs.push_back(reg_temp_heap);
                 },
         });
 
         regs = shuffled<Xbyak::Reg32>({eax, ebx, edx, ecx, esi, edi});
-        std::erase_if(regs, [&](auto& r){ return r == new_ebx; });
+        std::erase_if(regs, [&](auto &r) { return r == new_ebx; });
 
-        Xbyak::Reg32 reg_jump_offset = *find_and_remove_item(regs, [&](auto& r) { return r != esi && r != edi && r != ebx; });
+        Xbyak::Reg32 reg_jump_offset = *find_and_remove_item(regs, [&](auto &r) { return r != esi && r != edi && r != ebx; });
         std::shuffle(regs.begin(), regs.end(), mt_);
 
         maybeGenJunk(regs);
@@ -85,7 +88,7 @@ public:
                         lea(ebx, dword[new_ebx - ebx_offset]);
                         regs.push_back(new_ebx);
                     }
-                    std::erase_if(regs, [&](auto& r) { return r == ebx; });
+                    std::erase_if(regs, [&](auto &r) { return r == ebx; });
                 },
         });
         maybeGenJunk(regs);
