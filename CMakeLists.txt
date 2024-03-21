@@ -25,6 +25,7 @@ add_executable(ELangPatcher
         src/ELangPatcher/PatchELangLoaderInitStub.cpp
         src/ELangPatcher/PatchDllResolveAndCall.cpp
         src/ELangPatcher/PatchLoadWndCall.cpp
+        src/ELangPatcher/PatchSuspiciousCallWithParam.cpp
 )
 target_include_directories(ELangPatcher PRIVATE vendor/cxxopts/include)
 target_compile_definitions(ELangPatcher PRIVATE WIN32_LEAN_AND_MEAN=1)

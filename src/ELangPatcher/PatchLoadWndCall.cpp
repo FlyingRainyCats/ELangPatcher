@@ -1,6 +1,5 @@
 #include "ELangBulkPushGen.h"
 #include "ELangPatcherImpl.h"
-#include "ResolveCallDllFunctionGen.h"
 
 void ELangPatcherImpl::PatchLoadWndCall() {
     // @formatter:off
@@ -16,6 +15,8 @@ void ELangPatcherImpl::PatchLoadWndCall() {
                     {0x68}, PatternSegment::Skip(4),
                     {0x68}, PatternSegment::Skip(4),
                     {0x68, 0x03, 0x00, 0x00, 0x00},// 3 args
+                    {0xBB}, PatternSegment::Skip(4),
+                    {0xE8}, PatternSegment::Skip(4),
             }},
             ELang::PatternSearch::SearchMatcher{{
                     {0x68}, PatternSegment::Skip(4),
@@ -28,6 +29,8 @@ void ELangPatcherImpl::PatchLoadWndCall() {
                     {0x68}, PatternSegment::Skip(4),
                     {0x68}, PatternSegment::Skip(4),
                     {0x68, 0x03, 0x00, 0x00, 0x00},// 3 args
+                    {0xBB}, PatternSegment::Skip(4), // mov ebx, ???
+                    {0xE8}, PatternSegment::Skip(4), // call ???
             }},
     };
 
@@ -37,6 +40,8 @@ void ELangPatcherImpl::PatchLoadWndCall() {
     for (auto &pattern: patterns) {
         for (auto it = data_.begin(); (it = pattern.search(it, data_.end())) != data_.end(); it += pattern.size()) {
             auto offset = std::distance(data_.begin(), it);
+            auto ebx = read_u32(offset + pattern.offset_at_item(20));
+            auto call_delta = read_u32(offset + pattern.offset_at_item(22));
 
             values.resize(0);
             for (int i = 1; i < 18; i += 2) {
@@ -54,11 +59,13 @@ void ELangPatcherImpl::PatchLoadWndCall() {
                 continue;
             }
 
-            fprintf(stderr, "  INFO: [PatchLoadWndCall] found (offset=0x%08x)\n", static_cast<int>(offset));
+            fprintf(stderr, "  INFO: [PatchLoadWndCall] found (offset=0x%08x, ebx=0x%08x, call_delta=0x%08x)\n", static_cast<int>(offset), ebx, call_delta);
 
             auto padding_beg = rand_int(2, 7);
             auto padding_end = rand_int(2, 7);
-            auto snippet = GenerateBulkPushInstruction(pattern.size() - 5, values);
+            auto ret_addr_foa = offset + pattern.size();
+            auto ret_addr_rva = pe_.FOAtoRVA(ret_addr_foa);
+            auto snippet = GenerateBulkPushInstructionWithEBXCall(pattern.size() - 5, values, ebx - ret_addr_rva, call_delta);
 
             auto ptr_output = pe_.ExpandTextSection(padding_beg + snippet.size() + padding_end);
             it = data_.begin() + offset;

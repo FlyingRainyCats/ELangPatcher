@@ -30,14 +30,20 @@ void ELangPatcherImpl::PatchWndEventHandlerMain() {
         fprintf(stderr, "  INFO: [PatchWndEventHandlerMain] found (fn_end=%08tx, offset=0x%08tx, inst=0x%08x(p: 0x%08x), delta=0x%08x)\n", offset_fn_end, offset, call_foa, call_rva, call_inst_delta);
 
         auto function_size = static_cast<int>(offset_fn_end + pattern_fn_end.size() - offset);
+
+        auto padding_beg = rand_int(2, 7);
+        auto padding_end = rand_int(2, 7);
         auto snippet = GenerateWndHandlerCode(static_cast<uint32_t>(call_rva), call_inst_delta);
-        if (snippet.size() > function_size) {
-            fprintf(stderr, "  WARN: snippet too big, ignored (expected %zu, got %d bytes)\n", snippet.size(), function_size);
-            continue;
-        }
-        std::copy(snippet.cbegin(), snippet.cend(), it);
-        if (auto padding_size = function_size - static_cast<int>(snippet.size()); padding_size > 0) {
-            std::generate_n(it + static_cast<int>(snippet.size()), padding_size, mt_);
-        }
+
+        auto ptr_output = pe_.ExpandTextSection(padding_beg + snippet.size() + padding_end);
+        it = data_.begin() + offset;
+
+        std::generate_n(ptr_output, padding_beg, mt_);
+        std::copy(snippet.cbegin(), snippet.cend(), ptr_output + padding_beg);
+        std::generate_n(ptr_output + padding_beg + snippet.size(), padding_end, mt_);
+
+        std::generate_n(it, function_size, mt_);
+        write_jmp(offset, ptr_output + padding_beg - data_.data());
+        code_caves_.emplace_back(offset + 5, function_size - 5);
     }
 }

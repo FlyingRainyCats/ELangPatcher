@@ -24,12 +24,14 @@ public:
     void PatchProxyStub() override;
     void PatchLoadWndCall() override;
     void PatchELangLoaderInitStub() override;
+    void PatchSuspiciousCallWithParam() override;
     void MiscAddFakeEWndStub() override;
 
 private:
     std::vector<uint8_t>& data_;
     PEParser pe_;
     std::mt19937 mt_;
+    std::vector<std::pair<uint32_t, uint32_t>> code_caves_;
 
     inline int rand_int(int min, int max) {
         return std::uniform_int_distribution<>(min, max)(mt_);

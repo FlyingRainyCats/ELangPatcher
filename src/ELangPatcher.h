@@ -14,6 +14,7 @@ public:
     virtual void PatchKernelInvokeCall() = 0;
     virtual void PatchProxyStub() = 0;
     virtual void PatchLoadWndCall() = 0;
+    virtual void PatchSuspiciousCallWithParam() = 0;
     virtual void PatchELangLoaderInitStub() = 0;
 
     virtual void MiscAddFakeEWndStub() = 0;
@@ -26,6 +27,7 @@ public:
         PatchKernelInvokeCall();
         PatchProxyStub();
         PatchLoadWndCall();
+        PatchSuspiciousCallWithParam();
         PatchELangLoaderInitStub();
     }
 };

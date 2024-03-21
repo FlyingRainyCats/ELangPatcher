@@ -70,13 +70,14 @@ public:
                     break;
 
                 // special: do nothing
-                case OpCode::MOV: break;
+                case OpCode::MOV:
+                    break;
             }
             steps_.emplace(opcode, operand);
         }
         steps_.emplace(OpCode::MOV, v);
     }
-    inline bool generate_step(Xbyak::CodeGenerator& code, const Xbyak::Operand& op) {
+    inline bool generate_step(Xbyak::CodeGenerator &code, const Xbyak::Operand &op) {
         if (steps_.empty()) {
             return true;
         }
@@ -277,8 +278,10 @@ protected:
         }
     }
     inline void genJunk(const std::vector<Reg32> &regs) {
-        std::uniform_int_distribution<> dist_len(1, 4);
-        getJunkInstByLen(dist_len(mt_), regs);
+        if (!regs.empty()) {
+            std::uniform_int_distribution<> dist_len(1, 4);
+            getJunkInstByLen(dist_len(mt_), regs);
+        }
     }
     inline void fillWithJunkSlideInst(size_t size, const std::vector<Reg32> &regs) {
         int junk_code_left = static_cast<int>(size);

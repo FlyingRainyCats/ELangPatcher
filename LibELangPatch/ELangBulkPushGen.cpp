@@ -3,7 +3,7 @@
 
 class BulkPushInstruction : public CodeGenHelper {
 public:
-    explicit BulkPushInstruction(uint32_t ret_delta, std::vector<uint32_t> values_to_push) {
+    explicit BulkPushInstruction(uint32_t ret_delta, std::vector<uint32_t> values_to_push, uint32_t ebx_delta_to_ret_addr, uint32_t call_delta_to_ret_addr) {
         auto regs = Reg32List{eax, ecx, edx};
         shuffle(regs);
 
@@ -84,6 +84,33 @@ public:
         xchg(reg_last_value, dword[esp + (arg_count * 4 - 4)]);
         genJunk(regs);
 
+        if (ebx_delta_to_ret_addr && call_delta_to_ret_addr) {
+            auto reg_temp_delta_to_ret = pop_last_item(regs);
+            IntGenerator ebx_gen{rand_int(2, 5), ebx_delta_to_ret_addr};
+            while(!ebx_gen.done()){
+                ebx_gen.generate_step(*this, reg_temp_delta_to_ret);
+                genJunk(regs);
+            }
+            lea(ebx, dword[reg_last_value + reg_temp_delta_to_ret]);
+            regs.push_back(reg_temp_delta_to_ret);
+            shuffle(regs);
+            genJunk(regs);
+
+            push(reg_last_value);
+            regs.push_back(reg_last_value);
+            shuffle(regs);
+            genJunk(regs);
+
+            reg_last_value = pop_last_item(regs);
+            lea(reg_last_value, dword[ebx + (call_delta_to_ret_addr - ebx_delta_to_ret_addr)]);
+        }
+
+        genJunk(regs);
+        if (next_bool()) {
+            test(reg_last_value, reg_last_value);
+            jz("out");
+            fillWithJunkSlideInst(rand_int(2, 5), regs);
+        }
         pick_exec({
                 [&]() { jmp(reg_last_value); },
                 [&]() {
@@ -92,9 +119,14 @@ public:
                     ret();
                 },
         });
+        fillWithJunkSlideInst(rand_int(5, 10), {eax, ecx, edx, esi, edi, ebx});
+        L("out");
     }
 };
 
 std::vector<uint8_t> GenerateBulkPushInstruction(uint32_t ret_delta, std::vector<uint32_t> values_to_push) {
-    return BulkPushInstruction{ret_delta, std::move(values_to_push)}.vec();
+    return BulkPushInstruction{ret_delta, std::move(values_to_push), 0, 0}.vec();
+}
+std::vector<uint8_t> GenerateBulkPushInstructionWithEBXCall(uint32_t ret_delta, std::vector<uint32_t> values_to_push, uint32_t ebx_delta_to_ret_addr, uint32_t call_delta_to_ret_addr) {
+     return BulkPushInstruction{ret_delta, std::move(values_to_push), ebx_delta_to_ret_addr, call_delta_to_ret_addr}.vec();
 }

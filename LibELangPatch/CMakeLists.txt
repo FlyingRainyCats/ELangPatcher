@@ -12,6 +12,9 @@ add_library(LibELangPatch STATIC
         include/ResolveCallDllFunctionGen.h
         ELangBulkPushGen.cpp
         include/ELangBulkPushGen.h
+        CdeclPushAndCallGen.cpp
+        include/CdeclPushAndCallGen.h
+        CdeclPushAndCallGen.cpp
 )
 
 target_compile_definitions(LibELangPatch PRIVATE XBYAK32=1)
