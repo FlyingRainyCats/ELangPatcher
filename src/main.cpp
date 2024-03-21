@@ -8,15 +8,40 @@
 
 #include <Windows.h>
 #include <shellapi.h>
+#include <tlhelp32.h>
 
 namespace fs = std::filesystem;
 
-std::string ConvertWideToUtf8(const std::wstring &wstr) {
+std::string ConvertWideToMultibyte(UINT CodePage, const std::wstring &wstr) {
     if (wstr.empty()) return {};
-    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
+    int sizeNeeded = WideCharToMultiByte(CodePage, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
     std::string result(sizeNeeded, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, &result[0], sizeNeeded, nullptr, nullptr);
+    WideCharToMultiByte(CodePage, 0, wstr.data(), -1, &result[0], sizeNeeded, nullptr, nullptr);
     return result;
+}
+
+bool checkCallingFromE() {
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+    PROCESSENTRY32 pe{};
+    pe.dwSize = sizeof(PROCESSENTRY32);
+
+    DWORD pid = GetCurrentProcessId();
+    DWORD ppid{};
+    std::vector<DWORD> elang_pids{};
+    elang_pids.reserve(8);
+    if (Process32First(hSnapshot, &pe)) {
+        do {
+            if (pe.th32ProcessID == pid) {
+                ppid = pe.th32ParentProcessID;
+            } else if (_stricmp(pe.szExeFile, "e.exe") == 0) {
+                elang_pids.push_back(pe.th32ProcessID);
+            }
+        } while (Process32Next(hSnapshot, &pe));
+    }
+    CloseHandle(hSnapshot);
+
+    return std::find(elang_pids.cbegin(), elang_pids.cend(), ppid) != elang_pids.cend();
 }
 
 int main_unicode(int argc, wchar_t *argv[]) {
@@ -34,7 +59,7 @@ int main_unicode(int argc, wchar_t *argv[]) {
     std::vector<std::string> args_utf8(argc);
     std::vector<char *> argv_utf8(argc);
     for (int i = 0; i < argc; i++) {
-        args_utf8[i] = ConvertWideToUtf8(argv[i]);
+        args_utf8[i] = ConvertWideToMultibyte(CP_UTF8, argv[i]);
         argv_utf8[i] = args_utf8[i].data();
     }
     auto result = options.parse(argc, argv_utf8.data());
@@ -42,7 +67,8 @@ int main_unicode(int argc, wchar_t *argv[]) {
         fputs(options.help().c_str(), stderr);
         return 0;
     }
-    fprintf(stderr, "ELang Patcher v0.1 by FlyingRainyCats (爱飞的猫 @52pojie.cn)\n");
+    bool useGBK = checkCallingFromE();
+    fprintf(stderr, "ELang Patcher v0.1 by FlyingRainyCats (%s @52pojie.cn)\n", useGBK ? "\xB0\xAE\xB7\xC9\xB5\xC4\xC3\xA8" : "爱飞的猫");
     const auto file_count = result.count("files");
     if (file_count == 0) {
         fprintf(stderr, "ERROR: no input files specified\n");
@@ -58,7 +84,15 @@ int main_unicode(int argc, wchar_t *argv[]) {
     for (auto &file_path: files) {
         std::u8string temp_path(file_path.cbegin(), file_path.cend());
         fs::path exe_path{temp_path};
-        fprintf(stderr, "INFO: processing: %s\n", exe_path.string().c_str());
+
+        std::string exe_path_str{};
+        if (useGBK) {
+            exe_path_str = ConvertWideToMultibyte(936, exe_path.wstring());
+        } else {
+            exe_path_str = exe_path.string();
+        }
+        fprintf(stderr, "INFO: processing: %s\n", exe_path_str.c_str());
+
         if (!ELangPatchFile(exe_path, output_suffix, backup, fake_stub)) {
             error_count++;
         }

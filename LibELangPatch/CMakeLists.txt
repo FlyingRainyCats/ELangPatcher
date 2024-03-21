@@ -7,13 +7,9 @@ add_library(LibELangPatch STATIC
         CallProxyStubWithEcxGen.cpp
         VArgsProxyGen.cpp
         ELangLoaderInitGen.cpp
-        include/ELangLoaderInitGen.h
         ResolveCallDllFunctionGen.cpp
-        include/ResolveCallDllFunctionGen.h
         ELangBulkPushGen.cpp
-        include/ELangBulkPushGen.h
         CdeclPushAndCallGen.cpp
-        include/CdeclPushAndCallGen.h
         CdeclPushAndCallGen.cpp
 )
 

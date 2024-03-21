@@ -9,10 +9,8 @@ target_link_libraries(ELangPatcherTest LibELangPatch)
 
 add_executable(ELangPatcher
         src/ELangPatcher.cpp
-        src/ELangPatcher.h
         src/main.cpp
         src/ELangPatchFile.cpp
-        src/ELangPatcher/ELangPatcherImpl.h
         src/ELangPatcher/PatchEWndV02.cpp
         src/ELangPatcher/PatchEWndV02.cpp
         src/ELangPatcher/PatchEWndUltimate.cpp
