@@ -45,7 +45,7 @@ public:
         maybeGenJunk(regs);
         push(reg_stack_tracker);
         maybeGenJunk(regs);
-        push(dword[reg_stack_tracker + 4]);
+        push(dword[reg_stack_tracker - 4]);
         maybeGenJunk(regs);
         pick_exec({
                 [&]() { sub(reg_stack_tracker, 0x14); },
