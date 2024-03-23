@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.27)
-project(ELangPatcher)
+project(ELangPatcher VERSION 0.1.1)
 
 set(CMAKE_CXX_STANDARD 20)
 add_subdirectory(LibELangPatch)
@@ -26,7 +26,10 @@ add_executable(ELangPatcher
         src/ELangPatcher/PatchSuspiciousCallWithParam.cpp
 )
 target_include_directories(ELangPatcher PRIVATE vendor/cxxopts/include)
-target_compile_definitions(ELangPatcher PRIVATE WIN32_LEAN_AND_MEAN=1)
+target_compile_definitions(ELangPatcher PRIVATE
+        WIN32_LEAN_AND_MEAN=1
+        ELANG_PATCHER_VERSION="${PROJECT_VERSION}"
+)
 target_link_libraries(ELangPatcher LibELangPatch)
 
 if(MSVC)

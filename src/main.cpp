@@ -68,7 +68,7 @@ int main_unicode(int argc, wchar_t *argv[]) {
         return 0;
     }
     bool useGBK = checkCallingFromE();
-    fprintf(stderr, "ELang Patcher v0.1 by FlyingRainyCats (%s @52pojie.cn)\n", useGBK ? "\xB0\xAE\xB7\xC9\xB5\xC4\xC3\xA8" : "爱飞的猫");
+    fprintf(stderr, "ELang Patcher v%s by FlyingRainyCats (%s @52pojie.cn)\n", ELANG_PATCHER_VERSION, useGBK ? "\xB0\xAE\xB7\xC9\xB5\xC4\xC3\xA8" : "爱飞的猫");
     const auto file_count = result.count("files");
     if (file_count == 0) {
         fprintf(stderr, "ERROR: no input files specified\n");
