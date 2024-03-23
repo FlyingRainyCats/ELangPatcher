@@ -18,18 +18,21 @@ void ELangPatcherImpl::PatchKernelInvokeCall() {
         for (auto it = data_.begin(); (it = pattern.search(it, data_.end())) != data_.end(); it += pattern_size) {
             auto offset = std::distance(data_.begin(), it);
 
-            // TODO: Refactor to support cross-segment re-dir so we don't need to be constrained.
+            auto padding_beg = rand_int(2, 7);
+            auto padding_end = rand_int(2, 7);
             auto snippet = GenerateVArgsProxyCode();
-            for (int retries{3}; snippet.size() >= 0x40 && retries >= 0; retries--) {
-                snippet = GenerateVArgsProxyCode();
-            }
+
+            auto ptr_output = pe_.ExpandTextSection(padding_beg + snippet.size() + padding_end);
+            it = data_.begin() + offset;
 
             fprintf(stderr, "  INFO: [PatchKernelInvokeCall#%d] found (offset=0x%08tx, len=%04x, replace_len=%04x)\n", pattern_id, offset, static_cast<int>(pattern_size), static_cast<int>(snippet.size()));
-            std::copy(snippet.cbegin(), snippet.cend(), it);
 
-            if (auto junk_len = pattern_size - static_cast<int>(snippet.size()); junk_len > 0) {
-                std::generate_n(it + static_cast<int>(snippet.size()), junk_len, mt_);
-            }
+            std::generate_n(ptr_output, padding_beg, mt_);
+            std::copy(snippet.cbegin(), snippet.cend(), ptr_output + padding_beg);
+            std::generate_n(ptr_output + padding_beg + snippet.size(), padding_end, mt_);
+
+            std::generate_n(it, pattern.size(), mt_);
+            write_jmp(offset, ptr_output + padding_beg - data_.data());
         }
         pattern_id++;
     }
